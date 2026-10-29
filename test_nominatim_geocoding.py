@@ -41,7 +41,7 @@ FORWARD_NEGATIVE_CASES = [
 ]
 
 # DDT: Набор данных для обратного геокодирования (Координаты -> Адрес) негатив
-# Формат: (lat, lon, expected_country_code)
+# Формат: (lat, lon)
 REVERSE_NEGATIVE_CASES = [
     ("", ""),
     ("29.9791647", ""),
@@ -49,19 +49,12 @@ REVERSE_NEGATIVE_CASES = [
 
 @pytest.fixture(autouse=True)
 def polite_delay():
-    """
-    Задержка между запросами.
-    """
     time.sleep(1.1)
 
 
 @pytest.mark.parametrize("query, expected_country_code", FORWARD_CASES)
 def test_forward_geocoding(query, expected_country_code):
-    """
-    Прямое геокодирование: Поиск координат по текстовому адресу.
-    Проверяет, что API возвращает валидный JSON, список не пуст,
-    и страна результата соответствует ожидаемой.
-    """
+    #Прямое геокодирование: Поиск координат по текстовому адресу.
     params = {
         "q": query,
         "format": "jsonv2",
@@ -71,18 +64,17 @@ def test_forward_geocoding(query, expected_country_code):
 
     response = requests.get(f"{BASE_URL}/search", params=params, headers=HEADERS)
 
-    # 1. Проверка HTTP статуса
-
+    #Проверка HTTP статуса
     assert response.status_code == 200, f"Ожидался статус 200, получен {response.status_code}"
 
     data = response.json()
 
-    # 2. Проверка, что результат не пустой (найдено хотя бы одно место)
+    #Проверка, что результат не пустой (найдено хотя бы одно место)
     assert len(data) > 0, f"По запросу '{query}' ничего не найдено"
 
     first_result = data[0]
 
-    # 3. Проверка структуры ответа (наличие ключевых полей)
+    #Проверка структуры ответа (наличие ключевых полей)
     assert "lat" in first_result
     assert "lon" in first_result
     assert "display_name" in first_result
@@ -91,16 +83,14 @@ def test_forward_geocoding(query, expected_country_code):
     assert actual_country == expected_country_code, \
         f"Ожидалась страна '{expected_country_code}', получена '{actual_country}'"
 
+    # Вывод координат
     coords = {"Широта": data[0]["lat"], "Долгота": data[0]["lon"]}
     print(json.dumps(coords, ensure_ascii=False, indent=2))
 
 
 @pytest.mark.parametrize("lat, lon, expected_country_code", REVERSE_CASES)
 def test_reverse_geocoding(lat, lon, expected_country_code):
-    """
-    Обратное геокодирование: Получение адреса по координатам.
-    Проверяет корректность определения страны по заданным широте и долготе.
-    """
+    #Обратное геокодирование: Получение адреса по координатам.
     params = {
         "lat": lat,
         "lon": lon,
@@ -111,16 +101,15 @@ def test_reverse_geocoding(lat, lon, expected_country_code):
 
     response = requests.get(f"{BASE_URL}/reverse", params=params, headers=HEADERS)
 
-
-    # 1. Проверка HTTP статуса
+    #Проверка HTTP статуса
     assert response.status_code == 200, f"Ожидался статус 200, получен {response.status_code}"
 
     data = response.json()
 
-
-    # 2. Проверка, что ответ не содержит ошибки (Nominatim возвращает 'error' при неудаче)
+    #Проверка, что ответ не содержит ошибки (Nominatim возвращает 'error' при неудаче)
     assert "error" not in data, f"API вернул ошибку: {data.get('error')}"
 
+    # Вывод адреса
     address = data.get("address", {})
     print("\n" + json.dumps({
         "Место": data.get("display_name"),
@@ -128,7 +117,7 @@ def test_reverse_geocoding(lat, lon, expected_country_code):
     }, ensure_ascii=False, indent=2))
 
 
-    # 3. Проверка соответствия страны
+    #Проверка соответствия страны
     actual_country = data.get("address", {}).get("country_code", "").lower()
     assert actual_country == expected_country_code, \
         f"Ожидалась страна '{expected_country_code}', получена '{actual_country}' для координат ({lat}, {lon})"
@@ -136,12 +125,15 @@ def test_reverse_geocoding(lat, lon, expected_country_code):
 
 @pytest.mark.parametrize("query, expected_country_code", FORWARD_NEGATIVE_CASES)
 def test_forward_geocoding_negative(query, expected_country_code):
+    #Прямое геокодирование (негатив)
     params = {
         "q": query,
         "format": "jsonv2",
         "limit": 1
     }
     response = requests.get(f"{BASE_URL}/search", params=params, headers=HEADERS)
+
+    # Проверка HTTP статуса
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 0, f"Ожидался пустой результат для '{query}', получено {len(data)}"
@@ -149,12 +141,15 @@ def test_forward_geocoding_negative(query, expected_country_code):
 
 @pytest.mark.parametrize("lat, lon", REVERSE_NEGATIVE_CASES)
 def test_reverse_geocoding_negative(lat, lon):
+    #Обратное геокодирование (негатив)
     params = {
         "lat": lat,
         "lon": lon,
         "format": "jsonv2"
     }
     response = requests.get(f"{BASE_URL}/reverse", params=params, headers=HEADERS)
+
+    # Проверка HTTP статуса
     if response.status_code == 200:  # API может вернуть 200+error
         data = response.json()
         assert "error" in data, f"Ожидалась ошибка, получено: {data}"

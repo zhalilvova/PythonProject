@@ -41,10 +41,10 @@ FORWARD_NEGATIVE_CASES = [
 ]
 
 # DDT: Набор данных для обратного геокодирования (Координаты -> Адрес) негатив
-# Формат: (lat, lon)
+# Формат: (lat, lon, expected_country_code)
 REVERSE_NEGATIVE_CASES = [
-    ("", ""),
-    ("29.9791647", ""),
+    ("", "",""),
+    ("29.9791647", "","ru"),
 ]
 
 @pytest.fixture(autouse=True)
@@ -116,7 +116,6 @@ def test_reverse_geocoding(lat, lon, expected_country_code):
         "Адрес": address,
     }, ensure_ascii=False, indent=2))
 
-
     #Проверка соответствия страны
     actual_country = data.get("address", {}).get("country_code", "").lower()
     assert actual_country == expected_country_code, \
@@ -134,26 +133,44 @@ def test_forward_geocoding_negative(query, expected_country_code):
     response = requests.get(f"{BASE_URL}/search", params=params, headers=HEADERS)
 
     # Проверка HTTP статуса
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) == 0, f"Ожидался пустой результат для '{query}', получено {len(data)}"
-
-
-@pytest.mark.parametrize("lat, lon", REVERSE_NEGATIVE_CASES)
-def test_reverse_geocoding_negative(lat, lon):
-    #Обратное геокодирование (негатив)
-    params = {
-        "lat": lat,
-        "lon": lon,
-        "format": "jsonv2"
-    }
-    response = requests.get(f"{BASE_URL}/reverse", params=params, headers=HEADERS)
-
-    # Проверка HTTP статуса
-    if response.status_code == 200:  # API может вернуть 200+error
+    if response.status_code == 200:
         data = response.json()
         assert "error" in data, f"Ожидалась ошибка, получено: {data}"
     else:
         assert response.status_code == 400, \
-            f"Ожидался 400, получен {response.status_code}: {response.text}"
+            f"Ожидался 400 для запроса {query}, получен {response.status_code}: {response.text}"
+
+
+@pytest.mark.parametrize("lat, lon, expected_country_code", REVERSE_NEGATIVE_CASES)
+def test_reverse_geocoding_negative(lat, lon,expected_country_code):
+    #Обратное геокодирование (негатив)
+    params = {
+        "lat": lat,
+        "lon": lon,
+        "format": "jsonv2",
+        "addressdetails": 1
+    }
+    response = requests.get(f"{BASE_URL}/reverse", params=params, headers=HEADERS)
+
+
+    # Проверка HTTP статуса
+    if response.status_code == 200:
+        data = response.json()
+        assert "error" in data, f"Ожидалась ошибка, получено: {data}"
+    else:
+        print(f"Ожидался 400, получен '{response.status_code}': '{response.text}'")
+        assert response.status_code == 400, \
+           f"Ожидался 400, получен {response.status_code}: {response.text}"
+
+    # Вывод адреса
+    address = data.get("address", {})
+    print("\n" + json.dumps({
+        "Место": data.get("display_name"),
+        "Адрес": address,
+    }, ensure_ascii=False, indent=2))
+
+    # Проверка соответствия страны
+    actual_country = data.get("address", {}).get("country_code", "").lower()
+    assert actual_country == expected_country_code, \
+        f"Ожидалась страна '{expected_country_code}', получена '{actual_country}' для координат ({lat}, {lon})"
 

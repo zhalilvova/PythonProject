@@ -158,19 +158,6 @@ def test_reverse_geocoding_negative(lat, lon,expected_country_code):
         data = response.json()
         assert "error" in data, f"Ожидалась ошибка, получено: {data}"
     else:
-        print(f"Ожидался 400, получен '{response.status_code}': '{response.text}'")
+        #print(f"Ожидался 400, получен '{response.status_code}': '{response.text}'")
         assert response.status_code == 400, \
            f"Ожидался 400, получен {response.status_code}: {response.text}"
-
-    # Вывод адреса
-    address = data.get("address", {})
-    print("\n" + json.dumps({
-        "Место": data.get("display_name"),
-        "Адрес": address,
-    }, ensure_ascii=False, indent=2))
-
-    # Проверка соответствия страны
-    actual_country = data.get("address", {}).get("country_code", "").lower()
-    assert actual_country == expected_country_code, \
-        f"Ожидалась страна '{expected_country_code}', получена '{actual_country}' для координат ({lat}, {lon})"
-

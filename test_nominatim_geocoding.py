@@ -147,8 +147,7 @@ def test_reverse_geocoding_negative(lat, lon,expected_country_code):
     params = {
         "lat": lat,
         "lon": lon,
-        "format": "jsonv2",
-        "addressdetails": 1
+        "format": "jsonv2"
     }
     response = requests.get(f"{BASE_URL}/reverse", params=params, headers=HEADERS)
 
@@ -158,6 +157,7 @@ def test_reverse_geocoding_negative(lat, lon,expected_country_code):
         data = response.json()
         assert "error" in data, f"Ожидалась ошибка, получено: {data}"
     else:
-        #print(f"Ожидался 400, получен '{response.status_code}': '{response.text}'")
+        print(f"Ожидался 400, получен '{response.status_code}': '{response.text}'")
         assert response.status_code == 400, \
            f"Ожидался 400, получен {response.status_code}: {response.text}"
+

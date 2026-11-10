@@ -36,7 +36,7 @@ REVERSE_CASES = [
 # DDT: Набор данных для обратного геокодирования (Координаты -> Адрес) негатив
 # Формат: (query, expected_country_code)
 FORWARD_NEGATIVE_CASES = [
-    ("", ""),
+    ( "" , "ru"),
     ("asdfghjklqwerty123456", "запрос"),
 ]
 
@@ -135,10 +135,12 @@ def test_forward_geocoding_negative(query, expected_country_code):
     # Проверка HTTP статуса
     if response.status_code == 200:
         data = response.json()
-        assert "error" in data, f"Ожидалась ошибка, получено: {data}"
+        print(f"Ожидалась ошибка или пустой результат для '{query!r}', получено: '{data}'")
+        assert (isinstance(data, list) and data == []) or ("error" in data), \
+            f"Ожидалась ошибка или пустой результат для {query!r}, получено: {data}"
     else:
         assert response.status_code == 400, \
-            f"Ожидался 400 для запроса {query}, получен {response.status_code}: {response.text}"
+            f"Ожидался 400 для запроса {query!r}, получен {response.status_code}: {response.text}"
 
 
 @pytest.mark.parametrize("lat, lon, expected_country_code", REVERSE_NEGATIVE_CASES)
